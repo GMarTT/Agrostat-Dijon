@@ -112,13 +112,12 @@ g1 <- dat %>%
   geom_line(show.legend = FALSE)+
   theme_bw()+
   labs(color = "Région",
-       title = "Log Fluoroquinolone Consumption",
-       y = "DDJ/1000 habitants")+
+       title = "Functional variable X")+
   scale_x_continuous(breaks = seq(2012, 2024, by = 1),
                      minor_breaks = seq(2012, 2024, by = 1))+
   theme(axis.text.y = element_text(size = 6.5, color = "black"),
         axis.title.x = element_blank(),
-        axis.title.y = element_text(size = 6.5),
+        axis.title.y = element_blank(),
         plot.title = element_text(hjust = 0.5, size = 7.5),
         axis.text.x = element_text(angle = 45, vjust = 0.6, colour = "black", size = 6.5), 
         legend.text = element_text(size = 6.5), 
@@ -131,6 +130,8 @@ g1 <- dat %>%
         legend.key.spacing.y = unit(0.1, "cm") 
   )+
   scale_color_manual(values = cols)
+
+g1
 
 ggsave("C:/Users/g.martet/Documents/Agrostat Dijon/figures/var_AMC_FQ_ville.png", g1, dpi = 400,
        width = 5, height = 4)
@@ -181,13 +182,12 @@ g2 <- ysmooth %>%
   geom_line(show.legend = FALSE)+
   theme_bw()+
   labs(color = "Région",
-       title = "Smoothed Log Fluoroquinolone Consumption in B-spline basis",
-       y = "DDJ/1000 habitants")+
+       title = "Smoothed functional variable X in B-spline basis")+
   scale_x_continuous(breaks = seq(2012, 2024, by = 1),
                      minor_breaks = seq(2012, 2024, by = 1))+
   theme(axis.text.y = element_text(size = 6.5, color = "black"),
         axis.title.x = element_blank(),
-        axis.title.y = element_text(size = 6.5),
+        axis.title.y = element_blank(),
         plot.title = element_text(hjust = 0.5, size = 7.5),
         axis.text.x = element_text(angle = 45, vjust = 0.6, colour = "black", size = 6.5), 
         legend.text = element_text(size = 6.5), 
@@ -200,6 +200,8 @@ g2 <- ysmooth %>%
         legend.key.spacing.y = unit(0.1, "cm") 
   )+
   scale_color_manual(values = cols)
+
+g2
 
 ggsave("C:/Users/g.martet/Documents/Agrostat Dijon/figures/smoothed_AMC_FQ_ville.png", g2, dpi = 400,
        width = 5, height = 4)
@@ -214,7 +216,7 @@ df.heatmap.fPCA <- dfPC1.AMR_ville_FQ %>%
 
 ?pheatmap::pheatmap
 df.plot <- t(df.heatmap.fPCA)
-rownames(df.plot) <- "fPC1 (98.9%) \nLog Fluoroquinolone \nConsumption"
+rownames(df.plot) <- "fPC1 (98.9%) \nFunctional variable X"
   
 ph <- pheatmap::pheatmap(df.plot, 
                     cluster_rows = FALSE, 
@@ -225,10 +227,67 @@ ph <- pheatmap::pheatmap(df.plot,
                     fontsize = 10,
                     border_color = "white",
                     angle_col = 45, 
-                    display_numbers = TRUE, 
-                    number_color = "white")
+                    display_numbers = FALSE)
 
+ph
 
 ggsave("C:/Users/g.martet/Documents/Agrostat Dijon/figures/heatmap_fPC1.png", ph, dpi = 400,
        width = 10, height = 3, bg = "white")
 
+#-------------------------------------------------------------------------------
+# graphe des % de variance expliquée des fPC1
+#-------------------------------------------------------------------------------
+
+dfPC1.AMR_ville_FQ <- dfPC1.AMR_ville_FQ %>% 
+  dplyr::select(- AMR_ville_FQ_R.1, - AMR_ville_FQ_R.2, - AMR_ville_FQ_R.3)
+
+dat.func_ville_FQ[[3]]$log_UGB_density_volailles$varprop
+
+df.varprop.fPC1 <- data.frame(variable = rep(NA, ncol(dfPC1.AMR_ville_FQ)),
+                              block = rep(NA, ncol(dfPC1.AMR_ville_FQ)),
+                              varprop_fPC1 = rep(NA, ncol(dfPC1.AMR_ville_FQ)))
+j <- 6
+for (j in 1:ncol(dfPC1.AMR_ville_FQ)){
+  var <- colnames(dfPC1.AMR_ville_FQ)[j]
+  df.varprop.fPC1[j, "variable"] <- var
+  df.varprop.fPC1[j, "varprop_fPC1"] <- dat.func_ville_FQ[[3]][[var]]$varprop[1]
+}
+
+df.varprop.fPC1$block <- c("Y", 
+                           rep("AMC", 25-2+1),
+                           rep("Animals", 44-26+1),
+                           rep("Environment", 51-45+1),
+                           rep("Humans", 62-52+1))
+
+# df.varprop.fPC1$x <- as.factor(c("fPC1 Y",
+#                        paste0("fPC1 var", 1:24),
+#                        paste0("fPC1 var", 1:(44-26+1)),
+#                        paste0("fPC1 var", 1:(51-45+1)),
+#                        paste0("fPC1 var", 1:(62-52+1))))
+
+g <- df.varprop.fPC1 %>% 
+  ggplot(aes(x = variable, y = varprop_fPC1, fill = block))+
+  geom_bar(stat = "identity", color = "black", show.legend = FALSE)+
+  theme_bw()+
+  facet_wrap(~ block, scales = "free")+
+  geom_hline(yintercept = 0.70, color = "red3")+
+  scale_y_continuous(breaks = seq(0, 1, by = 0.1),
+                     minor_breaks = seq(0, 1, by = 0.1),
+                     labels = paste0(seq(0, 100, by = 10), "%"),
+                     expand = c(0, 0.01))+
+  labs(title = "Percentage of explained variance of each functional variable by its fPC1 score")+
+  theme(axis.text.x = element_blank(), 
+        plot.title = element_text(hjust = 0.5, size = 8),
+        axis.text.y = element_text(size = 8, color = "black"), 
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        strip.background = element_rect(fill = "white"),
+        strip.text = element_text(size = 8))+
+  scale_fill_manual(values = c("Y" = "#F8766D", "Animals" = "#00B0F6", 
+                               "Humans" = "#E76BF3", 
+                    "Environment" = "#00BF7D", "AMC" = "#A3A500"))
+
+g
+
+ggsave("C:/Users/g.martet/Documents/Agrostat Dijon/figures/barplot_fPC1.png", g, dpi = 400,
+       width = 6, height = 4, bg = "white")
